@@ -79,17 +79,20 @@ public class TopSynth {
 					
 					"signal step_once_complete_int : STD_LOGIC;\r\n" + 
 					"signal seven_steps_done : STD_LOGIC;\r\n" + 
-					"signal step_once_go_int : STD_LOGIC;\r\n" + 
+					"signal step_once_go_int : STD_LOGIC := '0';\r\n" + 
 					"signal seven_steps_done_shot_done : STD_LOGIC;\r\n" + 
 					"signal seven_steps_done_shot : STD_LOGIC;\r\n" + 
-					"signal COUNT : unsigned(2 downto 0) := \"000\";\r\n" + 
+					"signal seven_steps_done_shot2 : STD_LOGIC;\r\n" + 					
+					"signal COUNT : unsigned(2 downto 0) := \"110\";\r\n" + 
 					"signal seven_steps_done_next : STD_LOGIC;\r\n" + 
-					"signal COUNT_next : unsigned(2 downto 0) := \"000\";\r\n" + 
-					"signal step_once_go_int_next : STD_LOGIC;\r\n" + 
+					"signal COUNT_next : unsigned(2 downto 0) := \"110\";\r\n" + 
+					"signal step_once_go_int_next : STD_LOGIC := '0';\r\n" + 
 					"");
 			for(Iterator<EDEventPort> i = neuron.eventports.iterator(); i.hasNext(); ) {
 				EDEventPort eventport = i.next(); 
 				sb.append("signal " + neuron.name + "_eventport_" + eventport.direction +  "_" + eventport.name + "_int : STD_LOGIC;\r\n");
+				sb.append("signal " + neuron.name + "_eventport_" + eventport.direction +  "_" + eventport.name + "_int2 : STD_LOGIC;\r\n");
+				sb.append("signal " + neuron.name + "_eventport_" + eventport.direction +  "_" + eventport.name + "_int3 : STD_LOGIC;\r\n");
 			}
 			
 			sb.append("\r\n" + 
@@ -118,7 +121,8 @@ public class TopSynth {
 					"end component;\r\n" + 
 					"\r\n" + 
 					"\r\n" + 
-					"	\r\n" + 
+					"\r\n" + 
+					"	signal neuron_model_eventport_out_spike_out : STD_LOGIC := '0';\r\n" + 
 					"	");
 			
 			if (neuron.regimes.size() > 0)
@@ -234,15 +238,27 @@ public class TopSynth {
 			sb.append("\r\n" + 
 					"store_state: process (clk)\r\n" + 
 					"   begin\r\n" + 
-					"      if rising_edge(clk) then  \r\n" + 
-					"         if (init_model='1') then   \r\n" + 
+					"      if rising_edge(clk) then  \r\n"); 
+			for(Iterator<EDEventPort> i = neuron.eventports.iterator(); i.hasNext(); ) {
+			    EDEventPort eventport = i.next();
+			    sb.append("         " + neuron.name + "_eventport_" + eventport.direction 
+			    		+  "_" + eventport.name + "_int2 <= " + neuron.name + 
+			    		"_eventport_" + eventport.direction +  "_" + eventport.name + 
+			    		"_int;"); 
+			    sb.append("         " + neuron.name + "_eventport_" + eventport.direction 
+			    		+  "_" + eventport.name + "_int3 <= " + neuron.name + 
+			    		"_eventport_" + eventport.direction +  "_" + eventport.name + 
+			    		"_int2;"); 
+			}
+			sb.append("         seven_steps_done_shot2 <= seven_steps_done_shot;");
+			sb.append("         if (init_model='1') then   \r\n" + 
 					"		\r\n" + 
 					"");
 			
 			writeResetState(neuron,sb,"",neuron.name);
 			for(Iterator<EDEventPort> i = neuron.eventports.iterator(); i.hasNext(); ) {
 			    EDEventPort item = i.next();
-			    sb.append("			"+neuron.name + "_eventport_" + item.direction + "_" +name+  item.name + " <= '0';\r\n");
+			    sb.append("			"+neuron.name + "_eventport_" + item.direction + "_" +name+  item.name + "_out <= '0';\r\n");
 			}
 			sb.append("\r\n" + 
 					"		 \r\n" + 
@@ -250,8 +266,8 @@ public class TopSynth {
 					"");
 			for(Iterator<EDEventPort> i = neuron.eventports.iterator(); i.hasNext(); ) {
 			    EDEventPort item = i.next();
-			    sb.append("			"+neuron.name + "_eventport_" + item.direction + "_" +name+  item.name + " <= "+
-			    neuron.name + "_eventport_" + item.direction + "_" +name+  item.name + "_int ;\r\n");
+			    sb.append("			"+neuron.name + "_eventport_" + item.direction + "_" +name+  item.name + "_out <= "+
+			    neuron.name + "_eventport_" + item.direction + "_" +name+  item.name + "_int3 ;\r\n");
 			}
 			writeStepsDoneState(neuron,sb,"",neuron.name);
 			sb.append("\r\n" + 
@@ -259,7 +275,7 @@ public class TopSynth {
 					"");
 			for(Iterator<EDEventPort> i = neuron.eventports.iterator(); i.hasNext(); ) {
 			    EDEventPort item = i.next();
-			    sb.append("			"+neuron.name + "_eventport_" + item.direction + "_" +name+  item.name + " <= '0';\r\n");
+			    sb.append("			"+neuron.name + "_eventport_" + item.direction + "_" +name+  item.name + "_out <= '0';\r\n");
 			}
 			sb.append("		\r\n" + 
 					"end if;\r\n" + 
@@ -273,8 +289,9 @@ public class TopSynth {
 			writeCurrentStateAssignments(neuron,sb,"",neuron.name);
 			
 			
-			sb.append("\r\n" + 
-					" step_once_complete <= seven_steps_done_shot;\r\n" + 
+			sb.append("\r\n\n" + 
+					" neuron_model_eventport_out_spike <= neuron_model_eventport_out_spike_out;\r\n" + 
+					" step_once_complete <= seven_steps_done_shot2;\r\n" + 
 					"\r\n" + 
 					"end top;");
 	}

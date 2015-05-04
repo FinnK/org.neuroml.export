@@ -137,13 +137,12 @@ public class SiElegansTop {
 				"       busy_internal <= '1';\n" + 
 				"    elsif step_once_complete_internal = '1' then\n" + 
 				"      busy_internal <= '0';\n" + 
-				"      sendSpike <= '0';\n" + 
 				"    else\n" + 
-				"      sendSpike <= sendSpike_internal;\n" + 
 				"    end if;\n" + 
 				"  end if;\n" + 
 				"end if;\n" + 
-				"end process busy_proc;\n"
+				"end process busy_proc;\n" +
+				"sendSpike <= sendSpike_internal;\n"
 				
 				
 				+ "busy <= busy_internal;\n"

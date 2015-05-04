@@ -223,7 +223,8 @@ public class Testbench {
 				"	process\r\n" + 
 				"	variable L1              : LINE;\r\n" + 
 				"    begin\r\n" + 
-				"	write(L1, \"SimulationTime \" );\r\n");
+				"	write(L1, \"SimulationTime \" );\r\n" +
+				"	write(L1, \"neuron_model_spike \" );\r\n");
 		for(Iterator<EDComponent> z = sim.neuronComponents.iterator(); z.hasNext(); ) {
 			EDComponent child = z.next(); 
 			writeExposureTitlesToFile(sb,child,"",child.name);
@@ -268,6 +269,14 @@ public class Testbench {
 				" end process ;\r\n" + 
 				"  ");
 		
+		String spikeOut = "";
+		for(Iterator<EDEventPort> i =  sim.neuronComponents.get(0).eventports.iterator(); i.hasNext(); ) {
+		    EDEventPort item = i.next();
+		    spikeOut = ("			"+sim.neuronComponents.get(0).name + 
+		    		"_eventport_" + item.direction +  "_" + 
+		    		item.name + "_internal" );
+		}
+		
 		sb.append("\r\n" + 
 				"	--\r\n" + 
 				"	-- Print the results at each clock tick.\r\n" + 
@@ -282,7 +291,12 @@ public class Testbench {
 				"			if (step_once_complete'event and step_once_complete = '1' and init_model = '0') then\r\n" + 
 				"				sysparam_time_simtime <= resize(sysparam_time_simtime + sysparam_time_timestep,6, -22);\r\n" + 
 				"				write(L1, real'image(to_real( sysparam_time_simtime )));  -- nth value in row\r\n" + 
-				"						write(L1, \" \");");
+				"				write(L1, \" \");\r\n" +
+				"				if (" + spikeOut + " = '1') then\r\n" +
+				"					write(L1, \"1 \" );\r\n" +
+				"				else\r\n" +
+				"					write(L1, \"0 \" );\r\n" + 
+				"				end if;\r\n");
 
 		for(Iterator<EDComponent> z = sim.neuronComponents.iterator(); z.hasNext(); ) {
 			EDComponent child = z.next(); 

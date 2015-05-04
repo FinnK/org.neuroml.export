@@ -318,7 +318,7 @@ public class Architecture {
 				"signal subprocess_dyn_int_ready : STD_LOGIC := '0';\r\n" + 
 				"signal subprocess_dyn_ready : STD_LOGIC := '0';\r\n" + 
 				"signal subprocess_model_ready : STD_LOGIC := '1';\r\n" + 
-				"signal subprocess_all_ready_shotdone : STD_LOGIC := '0';\r\n" + 
+				"signal subprocess_all_ready_shotdone : STD_LOGIC := '1';\r\n" + 
 				"signal subprocess_all_ready_shot : STD_LOGIC := '0';\r\n" + 
 				"signal subprocess_all_ready : STD_LOGIC := '0';");
 		
@@ -326,7 +326,7 @@ public class Architecture {
 		{
 			sb.append("\r\n" + 
 					"\r\n" + 
-					"signal step_once_complete_fired : STD_LOGIC := '0';\r\n" + 
+					"signal step_once_complete_fired : STD_LOGIC := '1';\r\n" + 
 					"signal Component_done : STD_LOGIC := '0';\r\n" + 
 					"\r\n" + 
 					"\r\n" + 
