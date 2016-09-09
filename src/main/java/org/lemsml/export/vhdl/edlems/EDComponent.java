@@ -6,6 +6,10 @@ import java.util.List;
 public class EDComponent {
 
 	public boolean isSynapse = false;
+	public boolean isInstantiatedSynapse = true;
+	
+	public List<String> correspondingComponentIds = new ArrayList<String>();
+	public String componentInstanceSignature;
 	public float t_end;
 	public float t_start;
 	public String name;
@@ -22,9 +26,11 @@ public class EDComponent {
 	public List<EDState> state = new ArrayList<EDState>();
 	public List<EDStateFunction> state_functions = new ArrayList<EDStateFunction>();
 	public List<EDComponent> Children = new ArrayList<EDComponent>();
+	public List<EDComponent> VirtualChildren = new ArrayList<EDComponent>();	
 	public List<EDLink> links = new ArrayList<EDLink>();
 	public List<EDRegime> regimes = new ArrayList<EDRegime>();
 	public List<EDParameter> parameters = new ArrayList<EDParameter>();
+	public int synapseID;
 	
 	
 }

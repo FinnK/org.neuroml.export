@@ -69,41 +69,7 @@ public class MetadataWriter {
 			int inputBusPosition, int outputBusPosition)
 	{
 		Element item = doc.createElement("item" + itemNumber);
-		if (isFP)
-		{
-		Element itemIntegerPart = doc.createElement("itemIntegerPart");
-		itemIntegerPart.appendChild(doc.createTextNode(integerPart+""));
-		item.appendChild(itemIntegerPart);		
-		}
 		
-		int roundedLength = (length % 8) == 0 ? length : ((length / 8) + 1) *8;
-		int dataType = 0;
-		if (roundedLength > 32 )
-			roundedLength = 64;
-		switch (roundedLength)
-		{
-		case 8:
-			dataType =  (isFP) ? 1 : 16;
-			break;
-		case 16:
-			dataType =  (isFP) ? 2 : 32;
-			break;
-		case 24:
-			dataType =  (isFP) ? 3 : 64;
-			break;
-		case 32:
-			dataType =  (isFP) ? 4 : 128;
-			break;
-		case 64:
-			dataType =  (isFP) ? 5 : 256;
-			break;
-		default:
-			dataType = 99;
-			break;
-		}
-		Element itemDataType = doc.createElement("datatype");
-		itemDataType.appendChild(doc.createTextNode(dataType+""));
-		item.appendChild(itemDataType);
 
 		Element itemName = doc.createElement("name");
 		itemName.appendChild(doc.createTextNode(name+""));
@@ -116,6 +82,43 @@ public class MetadataWriter {
 			type.appendChild(doc.createTextNode("p"));			
 		}
 		item.appendChild(type);
+		int roundedLength = (length % 8) == 0 ? length : ((length / 8) + 1) *8;
+		int dataType = 0;
+		if (roundedLength > 32 )
+			roundedLength = 64;
+		switch (roundedLength)
+		{
+		case 8:
+			dataType =  (isFP) ? 4 : 8;//1 : 16;
+			break;
+		case 16:
+			dataType =  (isFP) ? 5 : 9;//2 : 32;
+			break;
+		case 24:
+			dataType =  (isFP) ? 6 : 10;//3 : 64;
+			break;
+		case 32:
+			dataType =  (isFP) ? 7 : 11;//4 : 128;
+			break;
+		case 64:
+			dataType =  (isFP) ? 99 : 99;//5 : 256;
+			break;
+		default:
+			dataType = 99;
+			break;
+		}
+		Element itemDataType = doc.createElement("datatype");
+		itemDataType.appendChild(doc.createTextNode(dataType+""));
+		item.appendChild(itemDataType);
+
+		
+		if (isFP)
+		{
+		Element itemIntegerPart = doc.createElement("itemIntegerPart");
+		itemIntegerPart.appendChild(doc.createTextNode(integerPart+""));
+		item.appendChild(itemIntegerPart);		
+		}
+		
 
 		Element direction = doc.createElement("direction");
 		if (isVar){
@@ -125,14 +128,27 @@ public class MetadataWriter {
 		}
 		item.appendChild(direction);
 
-		Element inputBusAddress = doc.createElement("inputBusAddress");
-		inputBusAddress.appendChild(doc.createTextNode(inputBusPosition+""));
+		Element inputBusAddress = doc.createElement("inputBusAddressLSB");
+		inputBusAddress.appendChild(doc.createTextNode((inputBusPosition)+""));
 		item.appendChild(inputBusAddress);
+		Element inputBusAddress2 = doc.createElement("inputBusAddressMSB");
+		inputBusAddress2.appendChild(doc.createTextNode((inputBusPosition+roundedLength-1)+""));
+		item.appendChild(inputBusAddress2);
 
 		if (isVar){
-			Element outputBusAddress = doc.createElement("outputBusAddress");
-			outputBusAddress.appendChild(doc.createTextNode(outputBusPosition+""));
+			Element outputBusAddress = doc.createElement("outputBusAddressLSB");
+			outputBusAddress.appendChild(doc.createTextNode((outputBusPosition)+""));
 			item.appendChild(outputBusAddress);
+			Element outputBusAddress2 = doc.createElement("outputBusAddressMSB");
+			outputBusAddress2.appendChild(doc.createTextNode((outputBusPosition+roundedLength-1)+""));
+			item.appendChild(outputBusAddress2);
+		}else{
+			Element outputBusAddress = doc.createElement("outputBusAddressLSB");
+			outputBusAddress.appendChild(doc.createTextNode("0"));
+			item.appendChild(outputBusAddress);
+			Element outputBusAddress2 = doc.createElement("outputBusAddressMSB");
+			outputBusAddress2.appendChild(doc.createTextNode("0"));
+			item.appendChild(outputBusAddress2);
 		}
 
 		rootElement.appendChild(item);
@@ -195,6 +211,12 @@ public class MetadataWriter {
 				Element firstname = doc.createElement("synapticInputs");
 				firstname.appendChild(doc.createTextNode("1"));
 				rootElement.appendChild(firstname);
+				
+
+				Element device = doc.createElement("device");
+				device.appendChild(doc.createTextNode("1"));
+				rootElement.appendChild(device);
+				
 				itemNumber = 1;
 				
 				writeIMetaPar(doc, rootElement, "sysparam_time_timestep", -6, 17, 576);
@@ -256,36 +278,20 @@ public class MetadataWriter {
 			String value, boolean isVar, boolean isFP, int integerPart, int length,
 			int inputBusPosition, int outputBusPosition)
 	{
-		Element item = doc.createElement("command"+itemNumber);
+		Element item = rootElement;
 
-		Element command = doc.createElement("command");
-		command.appendChild(doc.createTextNode("24"));
-		item.appendChild(command);
-
-		Element device = doc.createElement("device");
-		device.appendChild(doc.createTextNode("1"));
-		item.appendChild(device);
-
-		Element timestep = doc.createElement("timestep");
-		timestep.appendChild(doc.createTextNode("0"));
-		item.appendChild(timestep);
-
-		Element modelID = doc.createElement("modelID");
-		modelID.appendChild(doc.createTextNode("0"));
-		item.appendChild(modelID);
-
-		Element itemID = doc.createElement("itemID");
+		Element itemID = doc.createElement("itemid");
 		itemID.appendChild(doc.createTextNode(itemNumber+""));
 		item.appendChild(itemID);
 		
-		
-		
-		if (isFP)
-		{
-			Element itemIntegerPart = doc.createElement("itemIntegerPart");
-			itemIntegerPart.appendChild(doc.createTextNode(integerPart+""));
-			item.appendChild(itemIntegerPart);		
+
+		Element itemType = doc.createElement("itemtype");
+		if (isVar) {
+			itemType.appendChild(doc.createTextNode("2"));
+		}else{
+			itemType.appendChild(doc.createTextNode("1"));
 		}
+		item.appendChild(itemType);
 		
 		int roundedLength = (length % 8) == 0 ? length : ((length / 8) + 1) *8;
 		int dataType = 0;
@@ -294,34 +300,72 @@ public class MetadataWriter {
 		switch (roundedLength)
 		{
 		case 8:
-			dataType =  (isFP) ? 1 : 16;
+			dataType =  (isFP) ? 4 : 8;//1 : 16;
 			break;
 		case 16:
-			dataType =  (isFP) ? 2 : 32;
+			dataType =  (isFP) ? 5 : 9;//2 : 32;
 			break;
 		case 24:
-			dataType =  (isFP) ? 3 : 64;
+			dataType =  (isFP) ? 6 : 10;//3 : 64;
 			break;
 		case 32:
-			dataType =  (isFP) ? 4 : 128;
+			dataType =  (isFP) ? 7 : 11;//4 : 128;
 			break;
 		case 64:
-			dataType =  (isFP) ? 5 : 256;
+			dataType =  (isFP) ? 99 : 99;//5 : 256;
 			break;
 		default:
 			dataType = 99;
 			break;
 		}
-		Element itemDataType = doc.createElement("itemDatatype");
+
+
+		Element itemDataType = doc.createElement("itemdatatype");
 		itemDataType.appendChild(doc.createTextNode(dataType+""));
 		item.appendChild(itemDataType);
+		
+		if (isFP)
+		{
+			Element itemIntegerPart = doc.createElement("itemintegerpart");
+			itemIntegerPart.appendChild(doc.createTextNode(integerPart+""));
+			item.appendChild(itemIntegerPart);		
+		} else {
+			Element itemIntegerPart = doc.createElement("itemintegerpart");
+			itemIntegerPart.appendChild(doc.createTextNode("0"));
+			item.appendChild(itemIntegerPart);
+			
+		}
+		
 
-		Element itemName = doc.createElement("itemValue");
+		Element inputBusAddress = doc.createElement("inlsb");
+		inputBusAddress.appendChild(doc.createTextNode((inputBusPosition)+""));
+		item.appendChild(inputBusAddress);
+		Element inputBusAddress2 = doc.createElement("inmsb");
+		inputBusAddress2.appendChild(doc.createTextNode((inputBusPosition+roundedLength)+""));
+		item.appendChild(inputBusAddress2);
+
+		if (isVar){
+			Element outputBusAddress = doc.createElement("outlsb");
+			outputBusAddress.appendChild(doc.createTextNode((outputBusPosition)+""));
+			item.appendChild(outputBusAddress);
+			Element outputBusAddress2 = doc.createElement("outmsb");
+			outputBusAddress2.appendChild(doc.createTextNode((outputBusPosition+roundedLength)+""));
+			item.appendChild(outputBusAddress2);
+		}else{
+			Element outputBusAddress = doc.createElement("outlsb");
+			outputBusAddress.appendChild(doc.createTextNode("0"));
+			item.appendChild(outputBusAddress);
+			Element outputBusAddress2 = doc.createElement("outmsb");
+			outputBusAddress2.appendChild(doc.createTextNode("0"));
+			item.appendChild(outputBusAddress2);
+		}
+	
+		Element itemName = doc.createElement("itemvalue");
 		itemName.appendChild(doc.createTextNode(value+""));
 		item.appendChild(itemName);
 
 
-		rootElement.appendChild(item);
+		//rootElement.appendChild(item);
 		itemNumber++;
 	}
 
@@ -381,8 +425,28 @@ public class MetadataWriter {
 			if (sim.neuronComponents.get(i).name.matches(neuronName))
 			{
 				EDComponent neuron = sim.neuronComponents.get(i);
-				Element rootElement = doc.createElement("commands");
+				Element rootElement = doc.createElement("packet");
 				doc.appendChild(rootElement);
+
+				Element destDevice = doc.createElement("destdevice");
+				destDevice.appendChild(doc.createTextNode("1"));
+				rootElement.appendChild(destDevice);
+				
+				Element sourceDevice = doc.createElement("sourcedevice");
+				sourceDevice.appendChild(doc.createTextNode("65532"));
+				rootElement.appendChild(sourceDevice);
+				
+				Element command = doc.createElement("command");
+				command.appendChild(doc.createTextNode("24"));
+				rootElement.appendChild(command);
+
+				Element timestep2 = doc.createElement("timestamp");
+				timestep2.appendChild(doc.createTextNode("0"));
+				rootElement.appendChild(timestep2);
+
+				Element modelID = doc.createElement("modelid");
+				modelID.appendChild(doc.createTextNode("0"));
+				rootElement.appendChild(modelID);
 
 				itemNumber = 1;
 				

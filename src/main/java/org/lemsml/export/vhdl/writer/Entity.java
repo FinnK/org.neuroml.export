@@ -17,7 +17,8 @@ public class Entity {
 		Architecture.writeChildrenDeclarations(sb,comp,useVirtualSynapses);
 		Architecture.writeChildrenInstantiations(comp,sb,useMuxForSynapses&&isTopLevelNeuronModel
 				,useVirtualSynapses,neuronName);
-		DerivedVariableProcess.writeEDDerivedVariableProcess(sb,comp,useVirtualSynapses);
+		DerivedVariableProcess.removeUninstantiatedItems(comp,useVirtualSynapses,comp);
+		DerivedVariableProcess.writeEDDerivedVariableProcess(sb,comp,useVirtualSynapses,isTopLevelNeuronModel);
 		RegimeStateMachine.writeEDRegimeEDStateMachine(sb, comp);
 		StatevariableProcess.writeStateVariableProcess( sb,  comp, 
 				isTopLevelNeuronModel,useVirtualSynapses);
@@ -62,9 +63,12 @@ public class Entity {
 		
 		if (comp.name.contains(neuronModel))
 		{
-			sb.append("  step_once_complete : out STD_LOGIC; --signals to the core that a time step has finished\r\n" + 
-					  "  eventport_in_spike_aggregate : in STD_LOGIC_VECTOR(511 downto 0);\r\n" + 
-					  "  SelectSpikesIn			: Std_logic_vector(4607 downto 0) := (others => '0');\r\n");
+			sb.append("  step_once_complete : out STD_LOGIC; --signals to the core that a time step has finished\r\n"); 
+			if (!useVirtualSynapses ) {
+				sb.append("  eventport_in_spike_aggregate : in STD_LOGIC_VECTOR(511 downto 0);\r\n");
+			} else {
+				sb.append("  eventport_in_spike : in STD_LOGIC;\r\n");				
+			}
 			if (useVirtualSynapses)
 			sb.append("  step_once_clearCurrent : in STD_LOGIC;\r\n");
 				
@@ -111,6 +115,7 @@ public class Entity {
 		{
 			sb.append("  "+name+"step_once_go : in STD_LOGIC;\r\n");
 			sb.append("  "+name+"step_once_addCurrent : in STD_LOGIC;\r\n");
+			sb.append("  "+name+"step_once_complete : out STD_LOGIC;\r\n");
 		}
 		for(Iterator<EDParameter> i = comp.parameters.iterator(); i.hasNext(); ) {
 			EDParameter item = i.next(); 
@@ -120,7 +125,7 @@ public class Entity {
 
 		for(Iterator<EDDerivedVariable> j = comp.derivedvariables.iterator(); j.hasNext(); ) {
 			EDDerivedVariable dv = j.next(); 
-			if (dv.exposure!= null && dv.exposure.length() > 0 && 
+			if (dv.exposure!= null && dv.exposure.length() > 0 &&  
 					(dv.ExposureIsUsed))
 			{
 				sb.append("  "+prepend+"exposure_" + dv.type +  "_" + name + dv.name + 

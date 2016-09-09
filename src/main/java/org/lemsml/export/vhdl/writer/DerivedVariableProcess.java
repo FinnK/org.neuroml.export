@@ -10,11 +10,45 @@ import org.lemsml.export.vhdl.edlems.EDDerivedVariable;
 import org.lemsml.export.vhdl.edlems.EDExponential;
 import org.lemsml.export.vhdl.edlems.EDPower;
 import org.lemsml.export.vhdl.edlems.EDRegime;
+import org.lemsml.export.vhdl.edlems.EDSimulation;
 
 public class DerivedVariableProcess {
 
+	
+	static void removeUninstantiatedItems(EDComponent comp, boolean useVirtualSynapses, EDComponent neuron)
+	{
+		for(Iterator<EDDerivedVariable> j = comp.derivedvariables.iterator(); j.hasNext(); ) {
+			EDDerivedVariable derivedvariable = j.next(); 	
+			if (!derivedvariable.isEmpty)
+			{
+				if (derivedvariable.isSynapseSelect && useVirtualSynapses)
+				{
+					for(int k = 0; k < derivedvariable.items.size(); k++) {
+						String item = derivedvariable.items.get(k); 
+						String itemParent = derivedvariable.itemsParents.get(k); 
+						boolean found = false;
+						for(int i = 0; i < neuron.Children.size(); i++) {
+							if (neuron.Children.get(i).isInstantiatedSynapse && neuron.Children.get(i).name.matches(itemParent))
+							{
+								found = true;
+								break;
+							}
+						
+						}
+						
+						if (!found)
+						{
+							derivedvariable.sensitivityList = derivedvariable.sensitivityList.replace("," +item, "");
+							derivedvariable.items.remove(k);
+							derivedvariable.itemsParents.remove(k);
+						}
+					}
+				}
+			}
+		}
+	}
 
-	static void writeEDDerivedVariableProcess(StringBuilder sb, EDComponent comp, boolean useVirtualSynapses)
+	static void writeEDDerivedVariableProcess(StringBuilder sb, EDComponent comp, boolean useVirtualSynapses, boolean isTopLevelNeuronModel)
 	{
 		StringBuilder sensitivityList = new StringBuilder();
 		sensitivityList.append("sysparam_time_timestep");
@@ -280,7 +314,7 @@ public class DerivedVariableProcess {
 		{
 			//add the count process
 			sb.append("uut_delayDone_derivedvariable_"+comp.name+" : delayDone GENERIC MAP(\n" + 
-					"  Steps => 10\n" + 
+					"  Steps => 2\n" + 
 					"  )\n" + 
 					"PORT MAP(\n" + 
 					"  clk => clk,\n" + 
@@ -299,16 +333,15 @@ public class DerivedVariableProcess {
 				if (derivedvariable.isSynapseSelect && useVirtualSynapses)
 				{
 					sb.append("      variable derivedvariable_" + derivedvariable.type +  "_" + derivedvariable.name + 
-							"_temp : sfixed (" + derivedvariable.integer + " downto " + derivedvariable.fraction + ") :=" +
-							" to_sfixed (0," + derivedvariable.integer + " downto " + derivedvariable.fraction + ");\r\n");
+							"_temp : sfixed (" + derivedvariable.integer + " downto " + derivedvariable.fraction + ");\r\n");
 					
 				}
 			}
-		}
+		} 
 		sb.append("begin \r\n" + 
 				"\r\n" + 
 				"if clk'event and clk = '1' then  \r\n");
-		if (useVirtualSynapses)
+		if (useVirtualSynapses && isTopLevelNeuronModel)
 		{
 			sb.append("if step_once_clearCurrent = '1' then \r\n");
 			for(Iterator<EDDerivedVariable> j = comp.derivedvariables.iterator(); j.hasNext(); ) {
@@ -319,7 +352,7 @@ public class DerivedVariableProcess {
 					if (derivedvariable.isSynapseSelect && useVirtualSynapses)
 					{
 						sb.append("      derivedvariable_" + derivedvariable.type +  "_" + derivedvariable.name + 
-								" <= resize(0,"+ derivedvariable.integer + "," + derivedvariable.fraction + ");\r\n");
+								"_next <= to_sfixed(0,"+ derivedvariable.integer + "," + derivedvariable.fraction + ");\r\n");
 						
 					}
 				}
@@ -332,17 +365,23 @@ public class DerivedVariableProcess {
 				{
 					if (derivedvariable.isSynapseSelect && useVirtualSynapses)
 					{
+						sb.append("      derivedvariable_" + derivedvariable.type +  "_" + derivedvariable.name + 
+								"_temp := resize(derivedvariable_" + derivedvariable.type +  "_" + derivedvariable.name + 
+								"_next,"+ derivedvariable.integer + "," + derivedvariable.fraction + ");\r\n");
 						for(int k = 0; k < derivedvariable.items.size(); k++) {
 							String item = derivedvariable.items.get(k); 
-				
-							sb.append("      if " + derivedvariable.itemsParents.get(k) + "_step_once_addCurrent = '1' then\r\n");
+							if (k == 0)
+								sb.append("if " + derivedvariable.itemsParents.get(k) + "_step_once_addCurrent = '1' then\r\n");
+							else 
+								sb.append("elsif " + derivedvariable.itemsParents.get(k) + "_step_once_addCurrent = '1' then\r\n");
+							
 							sb.append("        derivedvariable_" + derivedvariable.type +  "_" + derivedvariable.name + 
-								"_temp <= derivedvariable_" + derivedvariable.type +  "_" + derivedvariable.name + 
-								"_temp + " + item + ";\r\n");
-							sb.append("      end if;\r\n");
+							"_temp := resize(derivedvariable_" + derivedvariable.type +  "_" + derivedvariable.name + 
+							"_temp + " + item + ","+ derivedvariable.integer + "," + derivedvariable.fraction + ");\r\n");
 						}
+						sb.append("      end if;\r\n");
 						sb.append("      derivedvariable_" + derivedvariable.type +  "_" + derivedvariable.name + 
-								" <= resize(derivedvariable_" + derivedvariable.type +  "_" + derivedvariable.name + 
+								"_next <= resize(derivedvariable_" + derivedvariable.type +  "_" + derivedvariable.name + 
 								"_temp,"+ derivedvariable.integer + "," + derivedvariable.fraction + ");\r\n");
 						
 					}
@@ -362,13 +401,29 @@ public class DerivedVariableProcess {
 			}
 		}
 		sb.append(" else \r\n"); */
+		for(Iterator<EDDerivedVariable> j = comp.derivedvariables.iterator(); j.hasNext(); ) {
+			EDDerivedVariable derivedvariable = j.next(); 
+
+			if (!derivedvariable.isEmpty)// && !(derivedvariable.isSynapseSelect && useVirtualSynapses) )
+			{
+
+				if ((derivedvariable.isSynapseSelect && useVirtualSynapses))
+				{
+			sb.append("    derivedvariable_" + derivedvariable.type +  "_" + derivedvariable.name + " <= derivedvariable_" + derivedvariable.type +  "_" + derivedvariable.name + "_next;\r\n");
+				}
+			}
+		}
 		sb.append("    if subprocess_all_ready_shot = '1' then  \r\n");
 		for(Iterator<EDDerivedVariable> j = comp.derivedvariables.iterator(); j.hasNext(); ) {
 			EDDerivedVariable derivedvariable = j.next(); 
 
-			if (!derivedvariable.isEmpty && !(derivedvariable.isSynapseSelect && useVirtualSynapses) )
+			if (!derivedvariable.isEmpty)// && !(derivedvariable.isSynapseSelect && useVirtualSynapses) )
 			{
+
+				if (!(derivedvariable.isSynapseSelect && useVirtualSynapses))
+				{
 			sb.append("      derivedvariable_" + derivedvariable.type +  "_" + derivedvariable.name + " <= derivedvariable_" + derivedvariable.type +  "_" + derivedvariable.name + "_next;\r\n");
+				}
 			}
 		}
 		for(Iterator<EDConditionalDerivedVariable> j = comp.conditionalderivedvariables.iterator(); j.hasNext(); ) {

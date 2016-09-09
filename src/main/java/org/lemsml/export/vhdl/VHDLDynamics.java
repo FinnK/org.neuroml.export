@@ -337,7 +337,7 @@ public class VHDLDynamics {
 
 	public static void writeDerivedVariables(EDComponent edComponent, ComponentType ct, 
 			LemsCollection<DerivedVariable> derivedVariables, Component comp
-			, LemsCollection<FinalParam> params,LemsCollection<ParamValue> combinedParameterValues, Lems lems)  throws ContentError, JsonGenerationException, IOException
+			, LemsCollection<FinalParam> params,LemsCollection<ParamValue> combinedParameterValues, Lems lems, Boolean useVirtualSynapses)  throws ContentError, JsonGenerationException, IOException
 	{
 		edComponent.derivedvariables = new ArrayList<EDDerivedVariable>();
 		for (DerivedVariable dv: derivedVariables)
@@ -417,10 +417,18 @@ public class VHDLDynamics {
 							{
 								String destination = conn.getTextParam("destination");
 								String path = conn.getPathParameterPath("to");
-								if ((destination == null || destination.matches(attachName)) && path.startsWith(comp.getID()))
+								if ((destination == null || destination.matches(attachName)) )
 								{
 									edDerivedVariable.isSynapseSelect = true;
 									Component c = (conn.getRefComponents().get("synapse"));
+
+									if (useVirtualSynapses) {
+										String synapseComponentName = VHDLWriter.getCompSignature(c,"");
+										
+										if (attachedSynapses.contains(synapseComponentName))
+											continue;
+										attachedSynapses.add(synapseComponentName);
+									}
 									items.add("exposure_" + dv.getDimension().getName() + "_" + c.getID() + "_" + var+ "_internal");
 									itemsParents.add(c.getID());
 									sensitivityList.append("exposure_" + dv.getDimension().getName() + "_" + c.getID() + "_" + var + "_internal,");
@@ -436,19 +444,24 @@ public class VHDLDynamics {
 									if (connection.getTypeName().matches("connection"))
 									{
 										String postCellId = connection.getAttributes().getByName("postCellId").getValue();
-										if (postCellId.endsWith(comp.getID()))
-										{
-											edDerivedVariable.isSynapseSelect = true;
-											Component c = (conn.getRefComponents().get("synapse"));
-											String synapseComponentName = c.getID();
+									
+										edDerivedVariable.isSynapseSelect = true;
+										Component c = (conn.getRefComponents().get("synapse"));
+										
+
+										if (useVirtualSynapses) {
+											String synapseComponentName = VHDLWriter.getCompSignature(c,"");
+											
 											if (attachedSynapses.contains(synapseComponentName))
 												continue;
 											attachedSynapses.add(synapseComponentName);
-											//comp2.setID(attach.getName() + "_" +  numberID);
-											items.add("exposure_" + dv.getDimension().getName() + "_" + c.getID() + "_" + var+ "_internal");
-											itemsParents.add(c.getID());
-											sensitivityList.append("exposure_" + dv.getDimension().getName() + "_" + c.getID() + "_" + var + "_internal,");
 										}
+										
+										//comp2.setID(attach.getName() + "_" +  numberID);
+										items.add("exposure_" + dv.getDimension().getName() + "_" + c.getID() + "_" + var+ "_internal");
+										itemsParents.add(c.getID());
+										sensitivityList.append("exposure_" + dv.getDimension().getName() + "_" + c.getID() + "_" + var + "_internal,");
+									
 									}
 								}						
 							}

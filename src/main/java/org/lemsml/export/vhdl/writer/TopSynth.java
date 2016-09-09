@@ -122,7 +122,7 @@ public class TopSynth {
 					"\r\n" + 
 					"\r\n" + 
 					"\r\n" + 
-					"	signal neuron_model_eventport_out_spike_out : STD_LOGIC := '0';\r\n" + 
+					"	signal "+neuron.name+"_eventport_out_spike_out : STD_LOGIC := '0';\r\n" + 
 					"	");
 			
 			if (neuron.regimes.size() > 0)
@@ -290,7 +290,7 @@ public class TopSynth {
 			
 			
 			sb.append("\r\n\n" + 
-					" neuron_model_eventport_out_spike <= neuron_model_eventport_out_spike_out;\r\n" + 
+					" "+neuron.name+"_eventport_out_spike <= "+neuron.name+"_eventport_out_spike_out;\r\n" + 
 					" step_once_complete <= seven_steps_done_shot2;\r\n" + 
 					"\r\n" + 
 					"end top;");

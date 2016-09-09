@@ -202,12 +202,31 @@ public class SiElegansTop {
 			sb.append("mega_bus_out(" + (currentBit+1) + " downto " + currentBit + 
 					") <= " + neuron.name + "_current_regimeCurrent_stdlv_int;\r\n");
 		}
-		
-		
+
+		int controlLength = currentBit + 1000;
+		int readbackLength = currentBit + 1000;
 		writeStateToBusSignals(neuron,sb,"",neuron.name);
 		
 		sb.append("\r\n" + 
 				"end top;\r\n" + 
+				"");
+
+		sb.append("\r\n" + 
+				"--Package declaration for the above program\r\n" + 
+				"library IEEE;\r\n" + 
+				"use IEEE.std_logic_1164.all;\r\n" + 
+				"use IEEE.std_logic_arith.all;\r\n" + 
+				"\r\n" + 
+				"package config_pkg is\r\n" + 
+				"\r\n" + 
+				"constant CONTROLBUS : integer := " + controlLength + ";\r\n" + 
+				"constant READBACKBUS : integer := " + readbackLength + ";\r\n" + 
+				"\r\n" + 
+				"end config_pkg;   --end of package.\r\n" + 
+				"\r\n" + 
+				"package body config_pkg is  --start of package body\r\n" + 
+				"\r\n" + 
+				"end config_pkg;  --end of the package body\r\n" + 
 				"");
 		
 		

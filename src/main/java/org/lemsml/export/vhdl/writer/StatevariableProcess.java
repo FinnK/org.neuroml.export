@@ -31,13 +31,13 @@ public class StatevariableProcess {
 				EDRegime regime = k.next(); 
 				for(Iterator<EDDynamic> l = regime.dynamics.iterator(); l.hasNext(); ) {
 					EDDynamic dynamic = l.next(); 
-					if (dynamic.name.matches(state.name))
+					if (dynamic.name.matches(state.name) && dynamic.sensitivityList.trim().length() > 0)
 						sensitivityList.append("," + dynamic.sensitivityList);
 				}
 			}
 			for(Iterator<EDDynamic> l = comp.dynamics.iterator(); l.hasNext(); ) {
 				EDDynamic dynamic = l.next(); 
-				if (dynamic.name.matches(state.name))
+				if (dynamic.name.matches(state.name) && dynamic.sensitivityList.trim().length() > 0)
 					sensitivityList.append("," + dynamic.sensitivityList);
 			}
 		}
@@ -332,7 +332,7 @@ public class StatevariableProcess {
 		{
 			//add the count process
 			sb.append("uut_delayDone_statevariable_"+comp.name+" : delayDone GENERIC MAP(\n" + 
-					"  Steps => 10\n" + 
+					"  Steps => 2\n" + 
 					"  )\n" + 
 					"PORT MAP(\n" + 
 					"  clk => clk,\n" + 
@@ -417,7 +417,7 @@ public class StatevariableProcess {
 
 		sensitivityList = new StringBuilder();
 		sensitivityList.append("sysparam_time_timestep,init_model");
-		if (state.onstart != null && !state.onstart.matches("0") && sensitivityList != null && sensitivityList.length() > 0)
+		if (state.onstart != null && !state.onstart.matches("0") && state.sensitivityList != null && state.sensitivityList.length() > 0)
 		{
 			sensitivityList.append("," + state.sensitivityList);
 		}
@@ -430,7 +430,11 @@ public class StatevariableProcess {
 				{
 					temporarySignalsRequired++;
 					sensitivityList.append(",eventport_in_" + event.name);
-					sensitivityList.append("," + state2.sensitivityList);
+					if (state2.sensitivityList.length() > 0 && state2.sensitivityList.charAt(state2.sensitivityList.length()-1) == ',')
+						state2.sensitivityList = state2.sensitivityList.substring(0, state2.sensitivityList.length()-1);
+					
+					if (state2.sensitivityList.length() > 0)
+						sensitivityList.append("," + state2.sensitivityList);
 				}					
 			}
 		}
@@ -441,7 +445,11 @@ public class StatevariableProcess {
 				if (state2.name.matches(state.name))
 				{
 					temporarySignalsRequired++;
-					sensitivityList.append("," + condition.sensitivityList);
+					if (condition.sensitivityList.length() > 0 && condition.sensitivityList.charAt(condition.sensitivityList.length()-1) == ',')
+						condition.sensitivityList = condition.sensitivityList.substring(0, condition.sensitivityList.length()-1);
+					
+					if (condition.sensitivityList.length() > 0)
+						sensitivityList.append("," + condition.sensitivityList);
 				}					
 			}
 		}
@@ -459,7 +467,11 @@ public class StatevariableProcess {
 						{
 							temporarySignalsRequired++;
 							sensitivityList.append(",eventport_in_" + event.name);
-							sensitivityList.append("," + state2.sensitivityList);
+							if (state2.sensitivityList.length() > 0 && state2.sensitivityList.charAt(state2.sensitivityList.length()-1) == ',')
+								state2.sensitivityList = state2.sensitivityList.substring(0, state2.sensitivityList.length()-1);
+							
+							if (state2.sensitivityList.length() > 0)
+								sensitivityList.append("," + state2.sensitivityList);
 						}					
 					}
 				}
@@ -470,7 +482,11 @@ public class StatevariableProcess {
 						if (state2.name.matches(state.name))
 						{
 							temporarySignalsRequired++;
-							sensitivityList.append("," + condition.sensitivityList);
+							if (condition.sensitivityList.length() > 0 && condition.sensitivityList.charAt(condition.sensitivityList.length()-1) == ',')
+								condition.sensitivityList = condition.sensitivityList.substring(0, condition.sensitivityList.length()-1);
+							
+							if (condition.sensitivityList.length() > 0)
+								sensitivityList.append("," + condition.sensitivityList);
 						}					
 					}
 				}
@@ -480,7 +496,12 @@ public class StatevariableProcess {
 					if (dynamic.name.matches(state.name))
 					{
 						temporarySignalsRequired++;
-						sensitivityList.append(",statevariable_" + state.type +  "_" + regime.name + "_" + state.name + "_temp_1, " + dynamic.sensitivityList);
+						sensitivityList.append(",statevariable_" + state.type +  "_" + regime.name + "_" + state.name + "_temp_1");
+						if (dynamic.sensitivityList.length() > 0 && dynamic.sensitivityList.charAt(dynamic.sensitivityList.length()-1) == ',')
+							dynamic.sensitivityList = dynamic.sensitivityList.substring(0, dynamic.sensitivityList.length()-1);
+						
+						if (dynamic.sensitivityList.length() > 0)
+							sensitivityList.append("," + dynamic.sensitivityList);
 					}	
 				}
 
@@ -503,9 +524,16 @@ public class StatevariableProcess {
 			if (dynamic.name.matches(state.name))
 			{
 				temporarySignalsRequired++;
-				sensitivityList.append(",statevariable_" + state.type +  "_noregime_" + state.name + "_temp_1, " + dynamic.sensitivityList);
+				sensitivityList.append(",statevariable_" + state.type +  "_noregime_" + state.name + "_temp_1");
+				if (dynamic.sensitivityList.length() > 0 && dynamic.sensitivityList.charAt(dynamic.sensitivityList.length()-1) == ',')
+					dynamic.sensitivityList = dynamic.sensitivityList.substring(0, dynamic.sensitivityList.length()-1);
+				
+				if (dynamic.sensitivityList.length() > 0)
+					sensitivityList.append("," + dynamic.sensitivityList);
 			}	
 		}
+		if (sensitivityList.length() > 0 && sensitivityList.toString().trim().charAt(sensitivityList.toString().trim().length()-1) == ',')
+			sensitivityList = new StringBuilder(sensitivityList.toString().trim().substring(0, sensitivityList.toString().trim().length()-1));
 		
 		sensitivityList = new StringBuilder(sensitivityList.toString().replace(" ","").replace(",,",","));
 		
@@ -1114,27 +1142,45 @@ public class StatevariableProcess {
 				childCombiner2.append(child.name + "_component_done = '1'");
 				count++;
 			}
-			sb.append("\r\n" + 
-					"childrenCombined_component_done_process:process("+childCombiner.toString() +"CLK)\r\n" + 
-					"begin\r\n" + 
-					"  if ("+childCombiner2.toString() +") then\r\n" + 
-					"    childrenCombined_component_done <= '1';\r\n" + 
-					"  else\r\n" + 
-					"    childrenCombined_component_done <= '0';\r\n" + 
-					"  end if;\r\n" + 
-					"end process childrenCombined_component_done_process;\r\n\r\n" + 
-					"component_done <= component_done_int and childrenCombined_component_done;");
+			if (count == 0) {
+				sb.append("\r\n\r\n" + 
+						"component_done <= component_done_int;");
+				
+			} else
+			{
+				sb.append("\r\n" + 
+						"childrenCombined_component_done_process:process("+childCombiner.toString() +"CLK)\r\n" + 
+						"begin\r\n" + 
+						"  if ("+childCombiner2.toString() +") then\r\n" + 
+						"    childrenCombined_component_done <= '1';\r\n" + 
+						"  else\r\n" + 
+						"    childrenCombined_component_done <= '0';\r\n" + 
+						"  end if;\r\n" + 
+						"end process childrenCombined_component_done_process;\r\n\r\n" + 
+						"component_done <= component_done_int and childrenCombined_component_done;");
+			} 
 		}
+		
 		
 		
 		if (isTopLevelNeuronModel)
 		{
+
 			sb.append("\r\n" + 
 					"---------------------------------------------------------------------\r\n" + 
 					"-- Control the done signal\r\n" + 
 					"---------------------------------------------------------------------\r\n" + 
-					"\r\n" + 
-					"step_once_complete_synch:process(clk)\r\n" + 
+					"\r\n");
+			if (useVirtualSynapses)
+			{
+				for(Iterator<EDEventPort> j = comp.eventports.iterator(); j.hasNext(); ) {
+					EDEventPort port = j.next(); 
+					sb.append("        eventport_" + port.direction +  "_" + port.name + 
+							" <=  eventport_" + port.direction + "_" + port.name + "_internal ;\r\n" );
+					
+				}		
+			}
+				sb.append("step_once_complete_synch:process(clk)\r\n" + 
 					"begin \r\n" + 
 					"  if (clk'EVENT AND clk = '1') then\r\n" + 
 					"    if init_model = '1' then " +
@@ -1147,12 +1193,18 @@ public class StatevariableProcess {
 					"---------------------------------------------------------------------\r\n" + 
 					"-- Assign event ports to exposures\r\n" + 
 					"---------------------------------------------------------------------\r\n");
-			for(Iterator<EDEventPort> j = comp.eventports.iterator(); j.hasNext(); ) {
-				EDEventPort port = j.next(); 
-				sb.append("        eventport_" + port.direction +  "_" + port.name + 
-						" <=  eventport_" + port.direction + "_" + port.name + "_internal ;\r\n" );
-				
-			}
+
+
+				if (!useVirtualSynapses)
+				{
+					for(Iterator<EDEventPort> j = comp.eventports.iterator(); j.hasNext(); ) {
+						
+						EDEventPort port = j.next(); 
+						sb.append("        eventport_" + port.direction +  "_" + port.name + 
+								" <=  eventport_" + port.direction + "_" + port.name + "_internal ;\r\n" );
+						
+					}
+				}
 			sb.append("\r\n" + 
 					"---------------------------------------------------------------------\r\n" + 
 					"      elsif component_done = '0' then\r\n" + 
@@ -1162,11 +1214,14 @@ public class StatevariableProcess {
 					"-- Assign event ports to exposures\r\n" + 
 					"---------------------------------------------------------------------\r\n" + 
 					"");
+			if (!useVirtualSynapses)
+			{
 			for(Iterator<EDEventPort> j = comp.eventports.iterator(); j.hasNext(); ) {
 				EDEventPort port = j.next(); 
 				sb.append("        eventport_" + port.direction +  "_" + port.name + 
 						" <=  '0';\r\n" );
 				
+			}
 			}
 			sb.append("\r\n" + 
 					"---------------------------------------------------------------------\r\n" + 
@@ -1177,11 +1232,15 @@ public class StatevariableProcess {
 					"-- Assign event ports to exposures\r\n" + 
 					"---------------------------------------------------------------------\r\n" + 
 					"");
+
+			if (!useVirtualSynapses)
+			{
 			for(Iterator<EDEventPort> j = comp.eventports.iterator(); j.hasNext(); ) {
 				EDEventPort port = j.next(); 
 				sb.append("        eventport_" + port.direction +  "_" + port.name + 
 						" <=  '0';\r\n" );
 				
+			}
 			}
 			sb.append("\r\n" + 
 					"---------------------------------------------------------------------\r\n" + 
@@ -1190,6 +1249,46 @@ public class StatevariableProcess {
 					"  end if;\r\n" + 
 					"end process step_once_complete_synch;\r\n" + 
 					"---------------------------------------------------------------------\r\n");
+			
+			int j = 0;
+			for(Iterator<EDComponent> i = comp.Children.iterator(); i.hasNext(); ) {
+				EDComponent item = i.next(); 
+				if (item.isSynapse && useVirtualSynapses)
+				{
+					String name = item.name;
+
+					sb.append("\r\n" + 
+							"---------------------------------------------------------------------\r\n" + 
+							"-- Control the synapse done signal\r\n" + 
+							"---------------------------------------------------------------------\r\n" + 
+							"\r\n" + 
+							"step_once_complete_" + name + "_synch:process(clk)\r\n" + 
+							"begin \r\n" + 
+							"  if (clk'EVENT AND clk = '1') then\r\n" + 
+							"    if init_model = '1' then " +
+							"      " + name + "_step_once_complete <= '0';\r\n" + 
+							"      " + name + "_step_once_complete_fired <= '1';\r\n" + 
+							"    else  " +
+							"      if " + name + "_component_done = '1' and " + name + "_step_once_complete_fired = '0'  then\r\n" + 
+							"        " + name + "_step_once_complete <= '1';\r\n" + 
+							"        " + name + "_step_once_complete_fired <= '1';\r\n" +
+							"---------------------------------------------------------------------\r\n" + 
+							"      elsif " + name + "_component_done = '0' then\r\n" + 
+							"        " + name + "_step_once_complete <= '0';\r\n" + 
+							"        " + name + "_step_once_complete_fired <= '0';\r\n" +
+							"---------------------------------------------------------------------\r\n" + 
+							"      else\r\n" + 
+							"        " + name + "_step_once_complete <= '0';\r\n" +
+							"      end if;\r\n" + 
+							"    end if;\r\n" + 
+							"  end if;\r\n" + 
+							"end process step_once_complete_" + name + "_synch;\r\n" + 
+							"---------------------------------------------------------------------\r\n");
+					
+				}
+			}
+			
+			
 		}
 		else
 		{

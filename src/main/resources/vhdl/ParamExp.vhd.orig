@@ -84,14 +84,12 @@ begin
    fractionCombProcess: process(COUNT_FRACTION,Start,output_fraction,current_term,X_fraction,ISPOSITIVE,current_term_next,init_model)
 		variable MEM8Xsfixed : MEM := (to_sfixed (1,BIT_TOP, BIT_BOTTOM),to_sfixed (0.5,BIT_TOP, BIT_BOTTOM),to_sfixed (0.33333333,BIT_TOP, BIT_BOTTOM),to_sfixed (0.25,BIT_TOP, BIT_BOTTOM),
 		to_sfixed (0.2,BIT_TOP, BIT_BOTTOM),to_sfixed (0.16666666667,BIT_TOP, BIT_BOTTOM),to_sfixed (0.142857142857,BIT_TOP, BIT_BOTTOM),to_sfixed (0.125,BIT_TOP, BIT_BOTTOM));
-		variable MEM8XsfixedOutTemp : sfixed(BIT_TOP downto BIT_BOTTOM);
 		begin
 			output_fraction_next <= output_fraction;
 			COUNT_FRACTION_next <= COUNT_FRACTION;
 			current_term_next <= current_term;
 			DONEFRACTION_next  <= '0';
-			MEM8XsfixedOutTemp := MEM8Xsfixed(to_integer(unsigned(COUNT_FRACTION(2 downto 0))));
-			current_term_next <= resize(MEM8XsfixedOutTemp * 
+			current_term_next <= resize(MEM8Xsfixed(to_integer(unsigned(COUNT_FRACTION(2 downto 0)))) * 
 				resize(X_fraction * current_term,BIT_TOP, BIT_BOTTOM),BIT_TOP, BIT_BOTTOM);
 			if init_model = '1' then
 				DONEFRACTION_next  <= '1';

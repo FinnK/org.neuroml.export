@@ -8,6 +8,7 @@ import java.io.StringWriter;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.util.Comparator;
+import java.util.Dictionary;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Properties;
@@ -59,6 +60,7 @@ import org.lemsml.export.vhdl.metadata.MetadataWriter;
 import org.lemsml.export.vhdl.writer.Constraints;
 import org.lemsml.export.vhdl.writer.Entity;
 import org.lemsml.export.vhdl.writer.NeuronCoreTop;
+import org.lemsml.export.vhdl.writer.NeuronCoreTopCombined;
 import org.lemsml.export.vhdl.writer.SiElegansTop;
 import org.lemsml.export.vhdl.writer.Testbench;
 import org.lemsml.export.vhdl.writer.TopSynth;
@@ -260,12 +262,14 @@ public class VHDLWriter extends ABaseWriter {
 		        E.info("Flat cpt: \n" + cptOut);
 			
 			
-				writeSOMForComponent(edComponent, cpFlat,true);
+				writeSOMForComponent(edComponent, cpFlat,true, useVirtualSynapses);
+				componentScripts.put("component_signature",getCompSignature(cpFlat,""));
 			}
 		    else
-				writeSOMForComponent(edComponent, lems.getComponent(neuronModel),true);
-			
-		
+		    {
+				writeSOMForComponent(edComponent, lems.getComponent(neuronModel),true, useVirtualSynapses);
+				componentScripts.put("component_signature",getCompSignature(lems.getComponent(neuronModel),""));
+		    }
 			Boolean expUsed = false;
 			Boolean powUsed = false;
 			Boolean counterUsed = false;
@@ -387,13 +391,14 @@ public class VHDLWriter extends ABaseWriter {
 				{
 					//add a new neuron component
 					Component neuron = lems.getComponent(comp.getStringValue("component"));
-					if (!neuronTypes.contains(neuron.getID()) && !neuron.getID().contains("spikeGen"))
+					if (neuronName.matches(neuron.getID())  || 
+							(!neuronTypes.contains(neuron.getID()) && !neuron.getID().contains("spikeGen")))
 					{
 						EDComponent edComponent = new EDComponent();
-						writeNeuronComponent(edComponent, neuron);
+						writeNeuronComponent(edComponent, neuron, useVirtualSynapses);
 						neuronTypes.add(neuron.getID());
 						edSimulation.neuronComponents.add(edComponent);
-					}
+					}  
 					else if (neuron.getID().contains("spikeGen"))
 					{
 						count++;
@@ -413,7 +418,7 @@ public class VHDLWriter extends ABaseWriter {
 						//add a new neuron component
 						EDComponent edComponent = new EDComponent();
 						Component neuron = lems.getComponent(comp.getStringValue("component"));
-						writeNeuron(edComponent, neuron, n);
+						writeNeuron(edComponent, neuron, n, useVirtualSynapses);
 						edSimulation.neuronInstances.add(edComponent);
 					}
 				}
@@ -445,7 +450,13 @@ public class VHDLWriter extends ABaseWriter {
 					edSimulation.eventConnections.add(edEventConnection);
 				}
 			}
-
+			for (EDComponent edComponent : edSimulation.neuronComponents)
+			{
+				for (EDComponent child : edComponent.Children)
+				{
+					checkExposuresNeeded(child,edComponent);
+				}
+			}
 			edSimulation.synapseCount = (count);
 			
 			if (scriptType == ScriptType.DEFAULTPARAMJSON){
@@ -523,8 +534,21 @@ public class VHDLWriter extends ABaseWriter {
 		return getMainScript(Method.TESTBENCH);
 	}*/
 
+	public String getNeuronCoreTopCombined(int count, int NP_WORDSWIDTH, int NS_WORDSWIDTH, 
+			int SP_WORDSWIDTH, int SS_WORDSWIDTH) throws JsonGenerationException, IOException
+	{
+		StringBuilder output = new StringBuilder();
+		JsonFactory f = new JsonFactory();
 	
-
+		StringWriter sw = new StringWriter();
+		JsonGenerator g = f.createJsonGenerator(sw);
+		g.writeStartObject();
+		NeuronCoreTopCombined.writeNeuronCoreTopCombined(output,count,NP_WORDSWIDTH,NS_WORDSWIDTH,
+				SP_WORDSWIDTH,SS_WORDSWIDTH);
+		g.writeEndObject();
+		g.close();
+		return output.toString();
+	}
 
 	//this file is required by Xilinx Fuse to compile a simulation of the vhdl testbench
 	public String getPrjFile(Set<String> files) throws ContentError, ParseError {
@@ -532,6 +556,8 @@ public class VHDLWriter extends ABaseWriter {
 		StringBuilder sb = new StringBuilder();
 		for (String file: files)
 		{
+			if (file.matches("component_signature"))
+				continue;
 			sb.append("vhdl work \"" + file + ".vhdl\"\r\n");
 		}
 		sb.append("vhdl work \"testbench.vhdl\"\r\n");
@@ -603,6 +629,9 @@ public class VHDLWriter extends ABaseWriter {
 		VelocityContext context = new VelocityContext();
 
 		Properties props = new Properties();
+
+		
+        props.put("runtime.log.logsystem.class","org.apache.velocity.runtime.log.NullLogSystem");
 		props.put("resource.loader", "class");
 		props.put("class.resource.loader.class", "org.apache.velocity.runtime.resource.loader.ClasspathResourceLoader");
 		VelocityEngine ve = new VelocityEngine();
@@ -628,6 +657,7 @@ public class VHDLWriter extends ABaseWriter {
 		VelocityContext context = new VelocityContext();
 
 		Properties props = new Properties();
+        props.put("runtime.log.logsystem.class","org.apache.velocity.runtime.log.NullLogSystem");
 		props.put("resource.loader", "class");
 		props.put("class.resource.loader.class", "org.apache.velocity.runtime.resource.loader.ClasspathResourceLoader");
 		VelocityEngine ve = new VelocityEngine();
@@ -651,6 +681,7 @@ public class VHDLWriter extends ABaseWriter {
 		VelocityContext context = new VelocityContext();
 
 		Properties props = new Properties();
+        props.put("runtime.log.logsystem.class","org.apache.velocity.runtime.log.NullLogSystem");
 		props.put("resource.loader", "class");
 		props.put("class.resource.loader.class", "org.apache.velocity.runtime.resource.loader.ClasspathResourceLoader");
 		VelocityEngine ve = new VelocityEngine();
@@ -674,6 +705,7 @@ public class VHDLWriter extends ABaseWriter {
 		VelocityContext context = new VelocityContext();
 
 		Properties props = new Properties();
+        props.put("runtime.log.logsystem.class","org.apache.velocity.runtime.log.NullLogSystem");
 		props.put("resource.loader", "class");
 		props.put("class.resource.loader.class", "org.apache.velocity.runtime.resource.loader.ClasspathResourceLoader");
 		VelocityEngine ve = new VelocityEngine();
@@ -694,10 +726,10 @@ public class VHDLWriter extends ABaseWriter {
 
 	
 
-	private void writeNeuron(EDComponent edComponent, Component neuron,int id) throws JsonGenerationException, IOException, ContentError
+	private void writeNeuron(EDComponent edComponent, Component neuron,int id, boolean useVirtualSynapses) throws JsonGenerationException, IOException, ContentError
 	{
 			edComponent.name = (neuron.getName() + "_" + id);
-			writeSOMForComponent(edComponent,neuron,true);
+			writeSOMForComponent(edComponent,neuron,true,useVirtualSynapses);
 	}
 
 	/*private void writeNeuronDefaults(JsonGenerator g, Component neuron) throws JsonGenerationException, IOException, ContentError
@@ -743,7 +775,7 @@ public class VHDLWriter extends ABaseWriter {
 				{
 					String destination = conn.getTextParam("destination");
 					String path = conn.getPathParameterPath("to");
-					if (destination.matches(attachName) && path.startsWith(neuron.getID()))
+					if (destination.matches(attachName) && path.startsWith("neuron_model_instance"))
 					{
 						Component comp2 = (conn.getRefComponents().get("synapse"));
 						for(FinalParam p: comp2.r_type.getFinalParams())
@@ -764,7 +796,7 @@ public class VHDLWriter extends ABaseWriter {
 	}*/
 	
 
-	private void writeNeuronComponent(EDComponent edComponent, Component neuron) throws JsonGenerationException, IOException, ContentError
+	private void writeNeuronComponent(EDComponent edComponent, Component neuron, boolean useVirtualSynapses) throws JsonGenerationException, IOException, ContentError
 	{	
 			//g.writeObjectFieldStart(neuron.getTypeName());
 
@@ -775,7 +807,7 @@ public class VHDLWriter extends ABaseWriter {
 			}
 			edComponent.name= compRef;
 			//g.writeStringField("name",neuron.getTypeName());
-			writeSOMForComponent(edComponent,neuron,true);
+			writeSOMForComponent(edComponent,neuron,true, useVirtualSynapses);
 			
 	}
 	
@@ -818,7 +850,8 @@ public class VHDLWriter extends ABaseWriter {
 	}
 	
 	
-	private void writeSOMForComponent(EDComponent edComponent, Component comp, boolean writeChildren) throws JsonGenerationException, IOException, ContentError
+	private void writeSOMForComponent(EDComponent edComponent, Component comp, boolean writeChildren
+			, boolean useVirtualSynapses) throws JsonGenerationException, IOException, ContentError
 	{
 		
 		ComponentType ct = comp.getComponentType();
@@ -844,8 +877,21 @@ public class VHDLWriter extends ABaseWriter {
 		edComponent.derivedparameters = VHDLParameters.writeDerivedParameters( ct, ct.getDerivedParameters(),parameters,parameterValues);
 		
 
+		if (writeChildren)
+		{
+			edComponent.Children = new ArrayList<EDComponent>();
+			
+			for (int i = 0; i < comp.getAllChildren().size();i++)
+			{
+				Component comp2 = comp.getAllChildren().get(i);
+				EDComponent child = new EDComponent();
+				writeNeuronComponent(child, comp2, useVirtualSynapses);
+				edComponent.Children.add(child);
+			}
+		}
+
 		if (dyn != null)
-			VHDLDynamics.writeDerivedVariables(edComponent, ct, dyn.getDerivedVariables(),comp,parameters,parameterValues,lems);
+			VHDLDynamics.writeDerivedVariables(edComponent, ct, dyn.getDerivedVariables(),comp,parameters,parameterValues,lems,useVirtualSynapses);
 		
 		if (dyn != null)
 			writeConditionalDerivedVariables(edComponent, ct, dyn.getConditionalDerivedVariables(),comp,parameters,parameterValues);
@@ -879,25 +925,20 @@ public class VHDLWriter extends ABaseWriter {
 		
 		if (writeChildren)
 		{
-			edComponent.Children = new ArrayList<EDComponent>();
-			
-			for (int i = 0; i < comp.getAllChildren().size();i++)
-			{
-				Component comp2 = comp.getAllChildren().get(i);
-				EDComponent child = new EDComponent();
-				writeNeuronComponent(child, comp2);
-				edComponent.Children.add(child);
-			}
 			//Attachments synapses are children in this initial model of VHDL neurons
 			//This finds all synapse component instances which are ever connected to a population of this neuron type
+
 			List<String> attachedSynapses = new ArrayList<String>();
+			List<String> attachedSynapseSignatures = new ArrayList<String>();
+
+			int synCount = 0;
 			for(Attachments attach: comp.getComponentType().getAttachmentss())
 			{
 				int numberID = 0;
 				Target target = lems.getTarget();
-				 Component simCpt = target.getComponent();
-				 String targetId = simCpt.getStringValue("target");
-				 Component networkComp = lems.getComponent(targetId);
+				Component simCpt = target.getComponent();
+				String targetId = simCpt.getStringValue("target");
+				Component networkComp = lems.getComponent(targetId);
 				for(Component conn: networkComp.getAllChildren())
 				{
 					String attachName = attach.getName();
@@ -906,14 +947,54 @@ public class VHDLWriter extends ABaseWriter {
 					{
 						String destination = conn.getTextParam("destination");
 						String path = conn.getPathParameterPath("to");
-						if ((destination == null || destination.matches(attachName)) && path.startsWith(comp.getID()))
+						if ((destination == null || destination.matches(attachName)) && path.startsWith("neuron_model_instance"))
 						{
 							Component comp2 = (conn.getRefComponents().get("synapse"));
-							//comp2.setID(attach.getName() + "_" +  numberID);
+							String synapseComponentName = comp2.getID();
+							String synapseComponentSig = getCompSignature(comp2, "");
 							EDComponent child = new EDComponent();
+							if ((!useVirtualSynapses && attachedSynapses.contains(synapseComponentName)) || 
+								(useVirtualSynapses && attachedSynapseSignatures.contains(synapseComponentSig) ))
+							{
+								if (useVirtualSynapses && !attachedSynapses.contains(synapseComponentName))
+								{
+									int  i =0;
+									for (i = 0; i < edComponent.Children.size();i++) {
+										if (edComponent.Children.get(i).componentInstanceSignature.matches(synapseComponentSig))
+										{
+											edComponent.Children.get(i).correspondingComponentIds.add(comp2.getID());
+											child.isInstantiatedSynapse = false;
+										}												
+									}
+								}
+								else
+								continue;
+							}
+							if (useVirtualSynapses){
+								
+								if (!attachedSynapseSignatures.contains(synapseComponentSig))
+									attachedSynapseSignatures.add(synapseComponentSig);
+								child.componentInstanceSignature = synapseComponentSig;
+								child.synapseID = -1;
+								for (int k = 0; k < attachedSynapseSignatures.size();k++)
+								{
+									if (attachedSynapseSignatures.get(k).matches(synapseComponentSig))
+									{
+										child.synapseID = k;		
+										break;
+									}								
+								}
+							}
+							
+							attachedSynapses.add(synapseComponentName);
+							//comp2.setID(attach.getName() + "_" +  numberID);
 							child.isSynapse = true;
-							writeNeuronComponent(child, comp2);
-							edComponent.Children.add(child);
+							child.correspondingComponentIds.add(comp2.getID());
+							writeNeuronComponent(child, comp2,useVirtualSynapses);
+							if (child.isInstantiatedSynapse)
+								edComponent.Children.add(child);
+							if (useVirtualSynapses)
+								edComponent.VirtualChildren.add(child);
 							numberID++;
 						}
 					}
@@ -930,14 +1011,39 @@ public class VHDLWriter extends ABaseWriter {
 								{
 									Component comp2 = (conn.getRefComponents().get("synapse"));
 									String synapseComponentName = comp2.getID();
-									if (attachedSynapses.contains(synapseComponentName))
-										continue;
-									attachedSynapses.add(synapseComponentName);
-									//comp2.setID(attach.getName() + "_" +  numberID);
+									String synapseComponentSig = getCompSignature(comp2, "");
 									EDComponent child = new EDComponent();
+									if ((!useVirtualSynapses && attachedSynapses.contains(synapseComponentName)) || 
+										(useVirtualSynapses && attachedSynapses.contains(synapseComponentSig) ))
+									{
+										if (useVirtualSynapses)
+										{
+											int  i =0;
+											for (i = 0; i < edComponent.Children.size();i++) {
+												if (edComponent.Children.get(i).componentInstanceSignature.matches(synapseComponentSig))
+												{
+													edComponent.Children.get(i).correspondingComponentIds.add(comp2.getID());
+													child.isInstantiatedSynapse = false;
+												}												
+											}
+										}
+										else
+										continue;
+									}
+									if (useVirtualSynapses){
+										attachedSynapses.add(synapseComponentSig);
+										child.componentInstanceSignature = synapseComponentSig;
+									}
+									else
+										attachedSynapses.add(synapseComponentName);
+									//comp2.setID(attach.getName() + "_" +  numberID);
 									child.isSynapse = true;
-									writeNeuronComponent(child, comp2);
-									edComponent.Children.add(child);
+									child.correspondingComponentIds.add(comp2.getID());
+									writeNeuronComponent(child, comp2,useVirtualSynapses);
+									if (child.isInstantiatedSynapse)
+										edComponent.Children.add(child);
+									if (useVirtualSynapses)
+										edComponent.VirtualChildren.add(child);
 									numberID++;
 								}
 							}
@@ -963,6 +1069,18 @@ public class VHDLWriter extends ABaseWriter {
 			checkExposuresNeeded(child,edComponent);
 		}
 	}
+	
+	public static String getCompSignature(Component comp2, String currentString)
+	{
+		currentString += comp2.getTypeName() +  "-";
+		int i = 0;
+		ArrayList<Component> comps = comp2.getAllChildren();
+		for (i = 0; i < comps.size(); i++){
+			currentString = getCompSignature(comps.get(i),currentString);
+		}
+		return currentString;		
+	}
+	
 	
 	private void checkExposuresNeeded(EDComponent edComponentCurrent, EDComponent edComponentParent) throws ContentError, JsonGenerationException, IOException
 	{

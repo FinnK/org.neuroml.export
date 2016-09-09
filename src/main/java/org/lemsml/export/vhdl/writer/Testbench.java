@@ -198,7 +198,7 @@ public class Testbench {
 				"   end loop;\r\n" + 
 				"    \r\n" + 
 				"   \r\n" + 
-				"   wait;\r\n" + 
+				"   assert false report \"end of simulation\" severity failure;\r\n" + 
 				"\r\n" + 
 				" end process receive_data;\r\n");
 		for(Iterator<EDEventConnection> z = sim.eventConnections.iterator(); z.hasNext(); ) {

@@ -68,8 +68,12 @@ public class Architecture {
 			    {
 				    if ( comp.name.contains(neuronModel))
 				    {
-					    sb.append("  eventport_" + item.direction +  "_" + item.name + " => EventPort_in_spike_aggregate(" + count +  "),\r\n"  );
-					    count++;
+				    	if (!useVirtualSynapses)
+				    		sb.append("  eventport_" + item.direction +  "_" + item.name + " => EventPort_in_spike_aggregate(" + count +  "),\r\n"  );
+				    	else
+				    		sb.append("  eventport_" + item.direction +  "_" + item.name + " => eventport_in_spike,\r\n"  );
+				    	
+				    	count++;
 				    }
 				    else
 				    {
@@ -324,9 +328,20 @@ public class Architecture {
 		
 		if (name.contains(neuronModel))
 		{
+			
+			for(Iterator<EDComponent> i = comp.Children.iterator(); i.hasNext(); ) {
+				EDComponent item = i.next(); 
+				if (item.isSynapse)
+				{
+					String name2 = item.name;
+
+					sb.append("signal " + name2 + "_step_once_complete_fired : STD_LOGIC := '1';\r\n");
+				}
+			}
+			
 			sb.append("\r\n" + 
 					"\r\n" + 
-					"signal step_once_complete_fired : STD_LOGIC := '1';\r\n" + 
+					"signal step_once_complete_fired : STD_LOGIC := '1';\r\n" +					
 					"signal Component_done : STD_LOGIC := '0';\r\n" + 
 					"\r\n" + 
 					"\r\n" + 

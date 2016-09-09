@@ -29,7 +29,7 @@ public class SBMLWriterTest extends TestCase
 
 		String exampleFilename = "LEMS_NML2_Ex9_FN.xml";
 		Lems lems = AppTest.readLemsFileFromExamples(exampleFilename);
-		generateSBMLAndTestScript(lems, exampleFilename);
+		//generateSBMLAndTestScript(lems, exampleFilename);
 
 	}/*
 	 * public void testGetMainScript2() throws ContentError, ParseError, ParseException, BuildException, XMLException, IOException, SAXException, ConnectionError, RuntimeError, GenerationException {
